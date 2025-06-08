@@ -1,0 +1,5 @@
+{
+  "name": "Herramienta de Análisis Pedagógico - LICEO INDUSTRIAL DE RECOLETA",
+  "description": "Aplicación web para el equipo directivo del Liceo Industrial de Recoleta. Permite simular el análisis de instrumentos de evaluación según la Taxonomía de Bloom, visualizar resultados y llevar un historial.",
+  "requestFramePermissions": []
+}
