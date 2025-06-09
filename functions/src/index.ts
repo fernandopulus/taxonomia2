@@ -1,11 +1,11 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import * as express from "express";
-import * as cors from "cors";
-import * as Busboy from "busboy";
-import * as pdfParse from "pdf-parse";
-import * as mammoth from "mammoth";
-import { GoogleGenerativeAI } from "@google/genai";
+import express from "express";
+import cors from "cors";
+import Busboy from "busboy";
+import pdfParse from "pdf-parse";
+import mammoth from "mammoth";
+import GoogleGenerativeAI from "@google/genai";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -21,12 +21,12 @@ app.post("/api/analyze", async (req, res) => {
     const fields: any = {};
     const fileBuffers: Buffer[] = [];
 
-    busboy.on("field", (fieldname, val) => {
+    busboy.on("field", (fieldname: any, val: any) => {
       fields[fieldname] = val;
     });
 
-    busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
-      file.on("data", (data) => {
+    busboy.on("file", (fieldname: any, file: any, filename: any, encoding: any, mimetype: any) => {
+      file.on("data", (data: any) => {
         fileBuffers.push(data);
       });
     });
@@ -82,14 +82,14 @@ ${extractedText}
           docId: docRef.id,
           resultado: jsonResponse,
         });
-      } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+      } catch (error: unknown) {
+        res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
       }
     });
 
     req.pipe(busboy);
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
   }
 });
 
