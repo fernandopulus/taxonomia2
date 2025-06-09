@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -8,10 +7,9 @@ import HistoryTable from './components/HistoryTable';
 import { FilterIcon, DownloadIcon, DocumentChartBarIcon } from './components/IconComponents';
 import type { Instrumento } from './types';
 import { simulateBloomAnalysis } from './services/analysisService';
-import { loadInstrumentosFromStorage, saveInstrumentosToStorage } from './services/storageService';
-import { generateInstrumentoPDF, generateConsolidadoPDF } from './services/pdfService'; // Updated import
-// import { DEFAULT_ASIGNATURAS, DEFAULT_NIVELES } from './constants'; // Not directly used here anymore
-
+// ELIMINADO: import { loadInstrumentosFromStorage, saveInstrumentosToStorage } from './services/storageService';
+import { fetchInstrumentos, saveInstrumento } from './services/firebaseService';
+import { generateInstrumentoPDF, generateConsolidadoPDF } from './services/pdfService';
 
 const App: React.FC = () => {
   const [instrumentos, setInstrumentos] = useState<Instrumento[]>([]);
@@ -22,34 +20,45 @@ const App: React.FC = () => {
   const [filtroAsignatura, setFiltroAsignatura] = useState<string>('');
   const [filtroNivel, setFiltroNivel] = useState<string>('');
 
+  // Cargar instrumentos desde Firestore al montar
   useEffect(() => {
-    const loadedInstrumentos = loadInstrumentosFromStorage();
-    setInstrumentos(loadedInstrumentos);
+    async function cargarInstrumentos() {
+      const loadedInstrumentos = await fetchInstrumentos();
+      setInstrumentos(loadedInstrumentos);
+    }
+    cargarInstrumentos();
   }, []);
 
-  useEffect(() => {
-    saveInstrumentosToStorage(instrumentos);
-  }, [instrumentos]);
-
-  const handleNewAnalysis = useCallback((fileName: string, asignatura: string, nivel: string) => {
+  const handleNewAnalysis = useCallback(async (fileName: string, asignatura: string, nivel: string) => {
     setIsLoading(true);
-    setTimeout(() => {
-      const nuevoInstrumento: Instrumento = {
-        id: crypto.randomUUID(),
-        nombreArchivo: fileName,
-        asignatura,
-        nivel,
-        fechaAnalisis: new Date().toISOString(),
-        analisisBloom: simulateBloomAnalysis(),
-      };
-      setInstrumentos(prevInstrumentos => [nuevoInstrumento, ...prevInstrumentos]);
+
+    // Puedes mantener el simulateBloomAnalysis solo para pruebas locales, luego quítalo si todo es por backend.
+    const nuevoInstrumento: Instrumento = {
+      id: crypto.randomUUID(),
+      nombreArchivo: fileName,
+      asignatura,
+      nivel,
+      fechaAnalisis: new Date().toISOString(),
+      analisisBloom: simulateBloomAnalysis(),
+    };
+
+    try {
+      // Guarda en Firestore
+      await saveInstrumento(nuevoInstrumento);
+      // Vuelve a cargar el historial actualizado
+      const loadedInstrumentos = await fetchInstrumentos();
+      setInstrumentos(loadedInstrumentos);
       setInstrumentoActualParaAnalisis(nuevoInstrumento);
+    } catch (error) {
+      console.error("Error al guardar en Firestore:", error);
+      alert("No se pudo guardar el instrumento en Firestore.");
+    } finally {
       setIsLoading(false);
       const analysisSection = document.getElementById('analysis-section');
       if (analysisSection && window.innerWidth < 768) {
         analysisSection.scrollIntoView({ behavior: 'smooth' });
       }
-    }, 1000);
+    }
   }, []);
 
   const handleViewHistoricalAnalysis = useCallback((instrumento: Instrumento) => {
@@ -108,7 +117,6 @@ const App: React.FC = () => {
     const allNiveles = instrumentos.map(i => i.nivel);
     return [...new Set(allNiveles)].sort((a,b) => a.localeCompare(b));
   }, [instrumentos]);
-
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100">
@@ -190,7 +198,7 @@ const App: React.FC = () => {
           <HistoryTable
             instrumentos={filteredInstrumentos}
             onViewDetails={handleViewHistoricalAnalysis}
-            onDownloadInstrumento={handleDownloadInstrumentoPDF} // Pass the main handler
+            onDownloadInstrumento={handleDownloadInstrumentoPDF}
           />
         </section>
       </main>
