@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "taxonomia3",
     "public": "dist",
     "ignore": [
       "firebase.json",
